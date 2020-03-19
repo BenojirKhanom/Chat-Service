@@ -1,0 +1,275 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Messenger</title>
+    <meta charset="UTF-8">
+    
+    <script src="script/jquery-3.4.1.js"></script>
+    <script src="script/socket.io.js"></script>
+   
+    <style type="text/css">
+
+
+          body {
+             background-image: url('background.jpg');
+             background-size: cover;
+             background-repeat: no-repeat;
+         }
+	
+	 #imgchat {
+	 
+	    overflow-y: scroll ;
+            overflow-x: hidden;
+            height: 300px;
+            position: relative;
+	    padding: 10px;
+	 }
+
+
+       
+	
+	  
+        #wrap {
+                
+               
+                background-color: rgba(31, 31, 31, 0.77);
+                opacity: 0.7;
+                border-radius: 5px;
+                color: #fda8a8;
+                box-shadow: 0 10px 10px 25px #000000;
+                margin: 25px auto;
+                width: 60%;
+                padding: 20px;
+                align-content: center;
+                height:540px;
+                outline: none;
+       
+        }
+          #btnSend{
+             
+              align-content: center;
+              text-align: center;
+              width: 200px;
+              height: 50px;
+              background-color: black;
+              color: #fda8a8;
+              padding: 15px;
+              margin-left: 320px;
+             /*top:20px;*/
+              border-radius: 40px;
+              /*float: left;*/
+             font-size: 20px;
+             font-weight: bold;
+             border: none;
+            cursor: pointer;
+            text-shadow: 3px 3px 3px #faeb9b;
+             position: absolute;
+           outline: none;
+        }
+ #btnChat{
+             
+              align-content: center;
+              text-align: center;
+              width: 300px;
+              height: 50px;
+              background-color: black;
+              color: #fda8a8;
+              padding:12px 50px 12px 50px;
+              margin-left: 20px;
+             /*top:20px;*/
+              border-radius: 40px ;
+              /*float: left;*/
+             font-size: 20px;
+             font-weight: bold;
+             border: none;
+            cursor: pointer;
+            text-shadow: 3px 3px 3px #faeb9b;
+            position: relative;
+            outline: none;
+        }
+#btnImageFile{
+             
+            align-content: center;
+              text-align: center;
+              width: 300px;
+              height: 50px;
+              background-color: black;
+              color: #fda8a8;
+              padding:12px 50px 10px 50px;
+              margin-left: 30px;
+             /*top:20px;*/
+              border-radius:30px ;
+              /*float: left;*/
+             font-size: 20px;
+             font-weight: bold;
+             border: none;
+            cursor: pointer;
+            text-shadow: 3px 3px 3px #faeb9b;
+            position: relative;
+            outline: none;
+        }
+#txtName{
+
+       width: 90%;
+       background-color:#faeb9b;
+       color: #fd3838;
+       padding: 10px;
+       height:15px;
+       border-radius: 15px;
+       outline: none;
+}
+
+
+
+
+        img {
+            width: 400px;
+            height: 250px;
+        }
+        h1 {  
+            top:20px;
+            font-family: Arial;
+            font-size: 40pt;
+            
+            font: bold;
+            font-style: italic;
+           text-shadow: 2px 2px #faeb9b;
+        }
+#b{
+width: 200px;
+
+}
+        
+
+     
+    </style>
+    <script>
+        var socket;
+
+        $(function () {
+            socket = io.connect('http://localhost:8080');
+            $('#btnSend').click(userInformation);
+            $('#btnChat').click(chatMessages);
+            $('#txtName').keypress(processEnterPress);
+            $('#txtName').focus();
+
+            socket.on('greetings', function (greet) {
+                $('#msg').html(greet);
+                setTimeout(function () {
+                    $('#msg').fadeOut(3000);
+                }, 5000);
+
+            })
+            socket.on('updateChat', function (user, messages) {
+                $('#chat').append('<b>' + user + ': </b>' + messages + '<br/>');
+            })
+			
+			function isInArray(value, array) {
+            return array.indexOf(value) > -1;}
+
+            //upload Picture
+            socket.on('addimage', function (user, myImage) {
+			 
+	         var fileExtension =  myImage.fileType.substr((myImage.fileType.lastIndexOf('.') + 1));
+                 var allowedImage = ['jpg','jpeg','png','gif'];
+                 if(isInArray(fileExtension , allowedImage)){
+		  $('#images').append('<br/><b>' + user + ': </b>' + '<a target="_blank" href="' + myImage.file + '"><img width="200" height="200" style="border-radius:10px" src="' + myImage.file + '" /></a>');
+		   }else
+                   {
+		    $('#images').append('<br/><b>' + user + ': </b>' + '<a target="_blank" href="' + myImage.file + '">'+myImage.fileType+'</a>');
+		   }
+				
+            })
+            $(function () {
+                $('#btnImageFile').on('change', function (e) {
+                    var file = e.originalEvent.target.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function (evt) {
+					
+					   var msg = {fileType : file.name , file : evt.target.result  }
+					
+                        socket.emit('userImage', msg);
+						
+						  
+                    };
+                    reader.readAsDataURL(file);
+                })
+            })
+        })
+        function userInformation() {
+            var user = $('#txtName').val();
+            if (user == '') {
+                alert('Name cannot be left blank');
+                $('#txtName').focus();
+                return;
+            }
+            socket.emit('user', user);
+            $('#txtName').val('');
+            $('#btnChat').show();
+            $('#btnImageFile').show();
+            $('#btnSend').hide();
+            $("#txtName").attr("placeholder", "Write your message here.");
+            $('#txtName').focus();
+        }
+        function chatMessages() {
+            socket.emit('chatSMS', $('#txtName').val());
+            $('#txtName').val('');
+            $('#txtName').focus();
+        }
+        function processEnterPress(e) {
+            if (e.which == 13) {
+                e.preventDefault();
+                $(this).blur();
+                var confrm = $("#txtName").attr("placeholder");
+                if (confrm == 'Enter your name') {
+                    $('#btnSend').focus().click();
+                }
+                else {
+                    $('#btnChat').focus().click();
+                }
+
+            }
+        }
+    </script>
+</head>
+
+<body>
+    
+    <div class='container' id='wrap'>
+        <h1><b> Chat on the Go! </b> </h1>
+        <form >
+            <div >
+                <label></label>
+                <div id='msg'></div>
+            </div>
+            <div id="imgchat"  >
+                <label></label>
+                <div id='chat'></div>
+                <div id='images'  ></div>
+            </div>
+            <div >
+                <label></label>
+                <div>
+                    <input id="txtName" placeholder="Enter your name please"><br/>
+                </div>
+            </div><br/>
+
+            <div >
+                <div >
+                    <button type="button" id='btnSend' class="btn btn-primary">Go!</button>
+                    <button type="button" id='btnChat' style='display:none' class="btn btn-primary">Send</button>
+
+                    <label class="btn btn-default btn-file" id='btnImageFile' style='display:none'>
+                        Add Items <input type="file" id="b" style="display: none;">
+                    </label>
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>
+
+
+
